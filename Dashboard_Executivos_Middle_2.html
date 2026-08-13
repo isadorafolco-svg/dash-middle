@@ -1,0 +1,488 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<title>Diagnóstico Individual — Executivos Middle</title>
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.0/chart.umd.min.js"></script>
+<style>
+  :root{
+    --navy: #1F3864; --navy-deep: #16264A; --ice: #CADCFC; --paper: #F7F8FC; --line: #E2E6F0;
+    --ink: #1B1F2A; --muted: #6B7280;
+    --red: #C0392B; --red-bg: #FCE4E4; --amber: #B8860B; --amber-bg: #FFF6D9;
+    --green: #2E7D4F; --green-bg: #E6F2E6; --grey-bg: #EEF0F5;
+    --serif: 'Source Serif Pro', Georgia, 'Times New Roman', serif;
+    --sans: 'Inter', -apple-system, Segoe UI, Roboto, Helvetica, Arial, sans-serif;
+  }
+  @import url('https://fonts.googleapis.com/css2?family=Source+Serif+Pro:wght@600;700&family=Inter:wght@400;500;600;700&display=swap');
+  *{box-sizing:border-box;}
+  html,body{margin:0;padding:0;background:var(--paper);color:var(--ink);font-family:var(--sans);}
+  header{ background: linear-gradient(135deg, var(--navy-deep), var(--navy)); color:#fff; padding:24px 40px 20px; }
+  header .eyebrow{ font-size:12px; letter-spacing:3px; text-transform:uppercase; color:var(--ice); font-weight:600; }
+  .title-row{ display:flex; align-items:center; justify-content:space-between; flex-wrap:wrap; gap:14px; }
+  header h1{ font-family:var(--serif); font-size:27px; margin:5px 0 5px; font-weight:700; }
+  header p{ margin:0; color:#B9C6E8; font-size:13.5px; max-width:800px; line-height:1.5; }
+  .legend{ display:flex; gap:20px; margin-top:12px; flex-wrap:wrap; }
+  .legend-item{ font-size:11.5px; color:#D7DFF3; max-width:250px; line-height:1.4; }
+  .legend-item b{ color:#fff; }
+  .dot{ width:9px; height:9px; border-radius:50%; display:inline-block; margin-right:5px; }
+  .methodnote{ margin-top:10px; font-size:11px; color:#9FB0DE; line-height:1.5; max-width:1000px; }
+
+  .window-toggle{ display:inline-flex; background:rgba(255,255,255,.12); border-radius:10px; padding:3px; flex-shrink:0; }
+  .wt-btn{ border:none; background:transparent; font-family:var(--sans); font-size:13px; font-weight:700; color:#B9C6E8; padding:8px 16px; border-radius:8px; cursor:pointer; }
+  .wt-btn.active{ background:#fff; color:var(--navy); }
+
+  .wrap{ display:grid; grid-template-columns: 290px 1fr; min-height: calc(100vh - 165px); }
+  @media (max-width: 900px){ .wrap{ grid-template-columns: 1fr; } }
+  .sidebar{ background:#fff; border-right:1px solid var(--line); padding:16px 10px; overflow-y:auto; }
+  .sidebar h3{ font-size:11px; text-transform:uppercase; letter-spacing:1.5px; color:var(--muted); margin:6px 10px 10px; }
+  .exec-item{ display:flex; align-items:center; gap:10px; padding:9px 12px; border-radius:8px; cursor:pointer; margin-bottom:2px; }
+  .exec-item:hover{ background: var(--grey-bg); }
+  .exec-item.active{ background: var(--navy); color:#fff; }
+  .exec-item.active .exec-sub{ color: var(--ice); }
+  .exec-name{ font-size:13px; font-weight:600; }
+  .exec-sub{ font-size:10.5px; color:var(--muted); }
+  .pdot{ width:9px; height:9px; border-radius:50%; flex-shrink:0; }
+
+  main{ padding:26px 34px; }
+  .section-title{ font-family:var(--serif); font-size:19px; font-weight:700; margin:0 0 4px; color:var(--navy); }
+  .section-sub{ font-size:12.5px; color:var(--muted); margin:0 0 14px; }
+  .card{ background:#fff; border:1px solid var(--line); border-radius:12px; padding:18px 20px; margin-bottom:20px; }
+  .card-head{ display:flex; align-items:center; justify-content:space-between; flex-wrap:wrap; gap:8px; }
+  .bubble-wrap{ height:420px; position:relative; }
+  #bubbleCanvas{ width:100% !important; height:100% !important; }
+  .toggle-group{ display:inline-flex; background:var(--paper); border-radius:8px; padding:2px; }
+  .toggle-btn{ border:none; background:transparent; font-family:var(--sans); font-size:11px; font-weight:600; color:var(--muted); padding:5px 10px; border-radius:6px; cursor:pointer; }
+  .toggle-btn.active{ background:var(--navy); color:#fff; }
+
+  .detail-header{ display:flex; align-items:baseline; justify-content:space-between; flex-wrap:wrap; gap:10px; margin-bottom:4px; }
+  .detail-name{ font-family:var(--serif); font-size:24px; font-weight:700; color:var(--navy); }
+  .badge{ font-size:11px; font-weight:700; padding:4px 10px; border-radius:20px; text-transform:uppercase; letter-spacing:.5px; }
+  .badge.red{ background:var(--red-bg); color:var(--red); }
+  .badge.yellow{ background:var(--amber-bg); color:var(--amber); }
+  .badge.green{ background:var(--green-bg); color:var(--green); }
+  .badge.grey{ background:var(--grey-bg); color:var(--muted); }
+  .detail-meta{ font-size:12.5px; color:var(--muted); margin-bottom:16px; }
+  .window-pill{ font-size:11px; font-weight:700; background:var(--ice); color:var(--navy); padding:3px 9px; border-radius:12px; margin-left:8px; }
+
+  .kpi-row{ display:grid; grid-template-columns: repeat(4, 1fr); gap:12px; margin-bottom:18px; }
+  @media (max-width: 800px){ .kpi-row{ grid-template-columns: repeat(2,1fr); } }
+  .kpi{ background: linear-gradient(135deg, #EFF3FF, #F7F9FF); border:1px solid var(--ice); border-radius:10px; padding:12px 14px; }
+  .kpi .label{ font-size:10.5px; color:var(--muted); text-transform:uppercase; letter-spacing:.4px; margin-bottom:4px;}
+  .kpi .value{ font-size:18px; font-weight:700; color:var(--navy); }
+  .kpi .value .sub{ font-size:11px; color:var(--muted); font-weight:500; }
+
+  .cmp-row{ display:grid; grid-template-columns: repeat(2, 1fr); gap:12px; margin-bottom:8px; }
+  .cmp-row.three{ grid-template-columns: repeat(3, 1fr); }
+  @media (max-width: 800px){ .cmp-row, .cmp-row.three{ grid-template-columns: 1fr 1fr; } }
+  .kpi2{ background:var(--paper); border-radius:10px; padding:12px 14px; }
+  .kpi2 .label{ font-size:10.5px; color:var(--muted); text-transform:uppercase; letter-spacing:.4px; margin-bottom:4px;}
+  .kpi2 .value{ font-size:13.5px; font-weight:700; color:var(--navy); }
+  .group-label{ font-size:11px; font-weight:700; text-transform:uppercase; letter-spacing:.8px; color:var(--muted); margin:14px 2px 8px; }
+
+  .grid2{ display:grid; grid-template-columns: 1.3fr 1fr; gap:18px; }
+  @media (max-width: 900px){ .grid2{ grid-template-columns: 1fr; } }
+  .chart-box{ height:270px; }
+  .chart-hint{ font-size:11px; color:var(--muted); margin-top:6px; }
+
+  .drilldown{ margin-top:14px; padding-top:14px; border-top:1px dashed var(--line); display:none; }
+  .drilldown.show{ display:block; }
+  .drilldown-head{ display:flex; align-items:center; justify-content:space-between; margin-bottom:8px; }
+  .drilldown-title{ font-size:13px; font-weight:700; color:var(--navy); }
+  .close-btn{ border:none; background:var(--grey-bg); color:var(--muted); font-size:11px; padding:4px 10px; border-radius:6px; cursor:pointer; font-weight:600; }
+  .drill-chart{ height:220px; }
+
+  .insight-box{ background: linear-gradient(135deg, #EFF3FF, #F7F9FF); border:1px solid var(--ice); border-radius:10px; padding:15px 18px; margin-top:16px; }
+  .insight-box .lbl{ font-size:11px; font-weight:700; text-transform:uppercase; letter-spacing:1px; color:var(--navy); margin-bottom:6px; }
+  .insight-box p{ margin:0; font-size:13.5px; line-height:1.55; color:#333; }
+  .foot-note{ font-size:11px; color:var(--muted); margin-top:20px; line-height:1.5; }
+</style>
+</head>
+<body>
+
+<header>
+  <div class="title-row">
+    <div>
+      <div class="eyebrow">Diagnóstico Individual</div>
+      <h1>Executivos Middle</h1>
+    </div>
+    <div class="window-toggle">
+      <button class="wt-btn active" id="winBtn3">Últimos 3 meses</button>
+      <button class="wt-btn" id="winBtn6">Últimos 6 meses</button>
+    </div>
+  </div>
+  <p>Leitura cruzando os 8 indicadores de carteira, força relativa vs. time e atingimento de meta — jan a jul/2026. O período de comparação acima (3 ou 6 meses) controla a classificação, os índices e as métricas-resumo; os gráficos históricos sempre mostram jan-jul completo.</p>
+  <div class="legend">
+    <div class="legend-item"><span class="dot" style="background:#C0392B"></span><b>Prioridade</b> — ofensor ≥2,5x o time OU faturamento &lt;98,5%</div>
+    <div class="legend-item"><span class="dot" style="background:#2E7D4F"></span><b>Benchmark</b> — faturamento ≥100% (obrigatório) E (faturamento &gt;101% OU produção ≥1,5x OU contenção &lt;0,3x)</div>
+    <div class="legend-item"><span class="dot" style="background:#B8860B"></span><b>Atenção</b> — não é Prioridade nem Benchmark, e faturamento &lt;100%</div>
+    <div class="legend-item"><span class="dot" style="background:#8B93A8"></span><b>Neutro</b> — não é Prioridade nem Benchmark, e bate 100% da meta</div>
+  </div>
+  <p class="methodnote">Todas as métricas de janela (carteira, crescimento, meta, índices, ponto forte/ofensor/contenção) usam MÉDIA simples dos meses da janela selecionada — não mediana.</p>
+</header>
+
+<div class="wrap">
+  <div class="sidebar">
+    <h3 id="sidebarCount">Executivos</h3>
+    <div id="execList"></div>
+  </div>
+
+  <main>
+    <div class="card">
+      <div class="card-head">
+        <div class="section-title">Mapa geral: meta × risco × carteira</div>
+        <span class="toggle-group">
+          <button class="toggle-btn active" id="bubbleFat">Faturamento</button>
+          <button class="toggle-btn" id="bubblePond">Ponderada</button>
+        </span>
+      </div>
+      <p class="section-sub" id="bubbleSub"></p>
+      <div class="bubble-wrap"><canvas id="bubbleCanvas"></canvas></div>
+      <div class="chart-hint">Linhas de referência: faturamento 98,5% (corte de prioridade) e 101% (corte de benchmark) · ofensor 2,5x (corte de prioridade). A cor de cada bolha também considera o indicador de produção mais forte e a melhor contenção, não visíveis nestes 2 eixos.</div>
+    </div>
+
+    <div class="card" id="detailCard"></div>
+
+    <div class="foot-note">
+      Crescimento de carteira = variação intramês (carteira final do mês ÷ carteira inicial do mesmo mês, não comparando um mês com outro), com média simples dos meses da janela.
+    </div>
+  </main>
+</div>
+
+<script>
+const DATA = {"Bianca Brito": {"monthly": {"QUEDA_DESC": {"value": [2887.12, 5488.65, 7523.929999999999, 5113.34, 2936.1600000000003, 154.13, 1266.28], "pct": [0.019534720829520603, 0.03617088958581657, 0.04959961648934947, 0.0326305771252465, 0.01907847042410181, 0.0010194816709921714, 0.008721022527976689], "idx": [1.4680369262326032, 2.7182472700821365, 3.727417922620369, 2.452192307337844, 1.4337496462346622, 0.07661418618136218, 0.6553860286669054]}, "REAJUSTE": {"value": [96.93, 1259.8799999999999, 56.74, 113.0, 738.4, 365.73, 1208.9], "pct": [0.0006558440556698136, 0.008302766686048221, 0.0003740441816451893, 0.0007211050341172021, 0.004797947850647368, 0.0024190944756502103, 0.00832583957266246], "idx": [0.20167735729272637, 2.5531679809922894, 0.11502161438038687, 0.22174563656403098, 1.4754078116308145, 0.7438911379509258, 2.5602630804404685]}, "UPSELL": {"value": [984.4, 1505.4800000000002, 794.27, 232.59, 636.22, 180.51, 1313.65], "pct": [0.006660609598693536, 0.009921301386252563, 0.0052360252406648666, 0.001484263892790443, 0.004134006475540179, 0.0011939702616674032, 0.009047265410396261], "idx": [1.5802415198599833, 2.3538464684487623, 1.2422563373112945, 0.35214425872919025, 0.980800417622436, 0.283271576423726, 2.1464798725788614]}, "FIMBONIF": {"value": [374.08, 0.49, 562.44, 596.83, 0.0, 0.0, 0.0], "pct": [0.0025310857767973163, 3.229161250407681e-06, 0.0037077442637384614, 0.003808647057629821, 0.0, 0.0, 0.0], "idx": [null, null, null, null, null, null, null]}, "VENDA_NOVA": {"value": [1872.0, 699.0, 5039.0, 4036.0, 6363.1, 4717.0, 5287.2], "pct": [0.012666254742741061, 0.0046064973755815695, 0.033218340347375905, 0.025755574492894052, 0.04134591274167696, 0.031200253306105707, 0.036413581759104106], "idx": [0.36750431865871536, 0.13365495277019107, 0.9638116226370661, 0.7472836326064974, 1.199628603724453, 0.9052579524196702, 1.0565197705321845]}, "CHURN_INAD": {"value": [7324.38, 9828.779999999999, 8398.42, 9440.88, 6059.05, 8906.8, 5858.740000000001], "pct": [0.04955793959008428, 0.06477288880567755, 0.05536447190716586, 0.06024660260616293, 0.03937026804505002, 0.05891338056960405, 0.0403498464206638], "idx": [1.1613628384277574, 1.5179167378374712, 1.2974357040264237, 1.411845730211148, 0.9226204040090756, 1.3806024109480879, 0.9455762801446705]}, "CHURN_SOLIC": {"value": [3200.6000000000004, 2429.0, 5395.6, 4259.93, 2138.0, 2827.0, 4341.97], "pct": [0.021655777205992013, 0.016007413627020933, 0.03556913617350694, 0.027184574937937106, 0.013892216284783413, 0.01869898581648523, 0.02990366916148004], "idx": [1.2102106703259141, 0.8945577243185239, 1.9877443197717681, 1.5191818028614994, 0.7763521125285867, 1.0449734472296777, 1.6711355661299312]}, "DOWNSELL": {"value": [407.8, 790.5999999999999, 3850.73, 4661.5199999999995, 4399.050000000001, 4706.67, 1428.79], "pct": [0.0027592407500479726, 0.00521015282565778, 0.025384969185523083, 0.02974730565166389, 0.028583982248632595, 0.031131926272683602, 0.009840248426689052], "idx": [0.11934948328703193, 0.22536237462349532, 1.0980132688663478, 1.2867038001833524, 1.2363848684101526, 1.3465948247937995, 0.4256346841503223]}}, "goal_months_fatur": [95.09, 94.14, 95.23, 92.16, 100.57, 91.53, 98.87], "goal_months_pond": [76.072, 94.14, 95.23, 92.16, 100.57, 91.53, 98.87], "w3": {"carteira": 150094.12333333332, "growth_mean": -3.4329225589850174, "growth_min": -7.291149294435743, "pct": {"QUEDA_DESC": 0.009675195588936784, "REAJUSTE": 0.005136843354537733, "UPSELL": 0.004731208996701337, "FIMBONIF": 0.0, "VENDA_NOVA": 0.03634896920348003, "CHURN_INAD": 0.04624784665675452, "CHURN_SOLIC": 0.02066918587107908, "DOWNSELL": 0.023395341905125006}, "fatur_mean": 96.99000000000001, "pond_mean": 96.99000000000001, "n_active": 3, "idx": {"QUEDA_DESC": 0.6612075080841624, "REAJUSTE": 1.3449978346386302, "UPSELL": 1.0032615660207431, "FIMBONIF": 0.0, "VENDA_NOVA": 1.00217529966427, "CHURN_INAD": 0.9894557522002337, "CHURN_SOLIC": 1.1150781613064054, "DOWNSELL": 1.089429857931115}, "forte_time": "Reajuste", "forte_time_idx": 1.3449978346386302, "forte_time_code": "REAJUSTE", "ofen_time": "Churn Solicitação", "ofen_time_idx": 1.1150781613064054, "ofen_time_code": "CHURN_SOLIC", "cont_label": "Churn Inadimplência", "cont_idx": 0.9894557522002337, "cont_code": "CHURN_INAD", "forte_si": "Venda Nova", "forte_si_pct": 0.03634896920348003, "ofen_si": "Churn Inadimplência", "ofen_si_pct": 0.04624784665675452, "priority": "red"}, "w6": {"carteira": 151736.96833333335, "growth_mean": -3.4489095028244203, "growth_min": -7.291149294435743, "pct": {"QUEDA_DESC": 0.024694586347838037, "REAJUSTE": 0.004110896684252324, "UPSELL": 0.0051214941786159535, "FIMBONIF": 0.0012738710642268114, "VENDA_NOVA": 0.0287133938498244, "CHURN_INAD": 0.05326395904333618, "CHURN_SOLIC": 0.023496251698978957, "DOWNSELL": 0.021789196811970047}, "fatur_mean": 95.41666666666667, "pond_mean": 95.41666666666667, "n_active": 6, "idx": {"QUEDA_DESC": 1.2462730480910889, "REAJUSTE": 1.0594868004371543, "UPSELL": 1.0428680178257206, "FIMBONIF": 2.4289691381703653, "VENDA_NOVA": 0.8656876350554775, "CHURN_INAD": 1.2522161584845621, "CHURN_SOLIC": 1.3350306364424012, "DOWNSELL": 1.1002813760797479}, "forte_time": "Queda Desconto", "forte_time_idx": 1.2462730480910889, "forte_time_code": "QUEDA_DESC", "ofen_time": "Churn Solicitação", "ofen_time_idx": 1.3350306364424012, "ofen_time_code": "CHURN_SOLIC", "cont_label": "Downsell", "cont_idx": 1.1002813760797479, "cont_code": "DOWNSELL", "forte_si": "Venda Nova", "forte_si_pct": 0.0287133938498244, "ofen_si": "Churn Inadimplência", "ofen_si_pct": 0.05326395904333618, "priority": "red"}, "regiao": ""}, "Flávia Pascoaleto": {"monthly": {"QUEDA_DESC": {"value": [null, null, null, null, 9620.03, 8592.0, 3010.75], "pct": [null, null, null, null, 0.0687412157825052, 0.057166433163876644, 0.02087587785120497], "idx": [null, null, null, null, 5.165911711947284, 4.296065224477464, 1.5688250587526986]}, "REAJUSTE": {"value": [null, null, null, null, 1147.29, 350.66, 1219.95], "pct": [null, null, null, null, 0.00819811471015271, 0.0023330984000517908, 0.008458864796006809], "idx": [null, null, null, null, 2.5209866510684966, 0.7174466484197645, 2.601169413684525]}, "UPSELL": {"value": [null, null, null, null, 1.3499999999999999, 608.8499999999999, 1431.9799999999998], "pct": [null, null, null, null, 9.646606227463115e-06, 0.004050952378005853, 0.009929034149420738], "idx": [null, null, null, null, 0.002288674551555636, 0.9610956846886837, 2.3556810803173205]}, "FIMBONIF": {"value": [null, null, null, null, 0.0, 223.3, 0.0], "pct": [null, null, null, null, 0.0, 0.00148571514495969, 0.0], "idx": [null, null, null, null, null, null, null]}, "VENDA_NOVA": {"value": [null, null, null, null, 5522.75, 3873.8500000000004, 6327.2], "pct": [null, null, null, null, 0.03946355151312735, 0.025774463118235984, 0.04387141221959448], "idx": [null, null, null, null, 1.1450129422824502, 0.7478316755384987, 1.2729045628580655]}, "CHURN_INAD": {"value": [null, null, null, null, 10799.0, 11787.23, 11988.749999999998], "pct": [null, null, null, null, 0.07716570418546237, 0.07842573277260727, 0.0831273538449335], "idx": [null, null, null, null, 1.8083354954497786, 1.8378635668056649, 1.948043449967334]}, "CHURN_SOLIC": {"value": [null, null, null, null, 0.0, 5986.0, 1408.0], "pct": [null, null, null, null, 0.0, 0.039827545265242736, 0.009762762107281109], "idx": [null, null, null, null, 0.0, 2.2257210994740264, 0.5455818445904574]}, "DOWNSELL": {"value": [null, null, null, null, 2603.62, 6852.739999999999, 6961.05], "pct": [null, null, null, null, 0.01860451622662779, 0.04559435558652514, 0.04826638861284741], "idx": [null, null, null, null, 0.8047284016136043, 1.9721594717540913, 2.0877368315810303]}}, "goal_months_fatur": [null, null, null, null, 101.31, 91.5, 93.95], "goal_months_pond": [null, null, null, null, 101.31, 91.5, 93.95], "w3": {"carteira": 144821.68666666665, "growth_mean": -3.6805326256052475, "growth_min": -7.303697141924519, "pct": {"QUEDA_DESC": 0.04884807077466713, "REAJUSTE": 0.006255738954013932, "UPSELL": 0.004700447027892185, "FIMBONIF": 0.0005139653807834398, "VENDA_NOVA": 0.036191172657244294, "CHURN_INAD": 0.07958057662910799, "CHURN_SOLIC": 0.01701862976046912, "DOWNSELL": 0.037787641657536286}, "fatur_mean": 95.58666666666666, "pond_mean": 95.58666666666666, "n_active": 3, "idx": {"QUEDA_DESC": 3.3383005909016243, "REAJUSTE": 1.637962220471573, "UPSELL": 0.9967384339792569, "FIMBONIF": 6.0, "VENDA_NOVA": 0.9978247003357299, "CHURN_INAD": 1.702597309956747, "CHURN_SOLIC": 0.918134971528399, "DOWNSELL": 1.7596231441910903}, "forte_time": "Queda Desconto", "forte_time_idx": 3.3383005909016243, "forte_time_code": "QUEDA_DESC", "ofen_time": "Downsell", "ofen_time_idx": 1.7596231441910903, "ofen_time_code": "DOWNSELL", "cont_label": "Churn Solicitação", "cont_idx": 0.918134971528399, "cont_code": "CHURN_SOLIC", "forte_si": "Queda Desconto", "forte_si_pct": 0.04884807077466713, "ofen_si": "Churn Inadimplência", "ofen_si_pct": 0.07958057662910799, "priority": "red"}, "w6": {"carteira": 144821.68666666665, "growth_mean": -3.6805326256052475, "growth_min": -7.303697141924519, "pct": {"QUEDA_DESC": 0.04884807077466713, "REAJUSTE": 0.006255738954013932, "UPSELL": 0.004700447027892185, "FIMBONIF": 0.0005139653807834398, "VENDA_NOVA": 0.036191172657244294, "CHURN_INAD": 0.07958057662910799, "CHURN_SOLIC": 0.01701862976046912, "DOWNSELL": 0.037787641657536286}, "fatur_mean": 95.58666666666666, "pond_mean": 95.58666666666666, "n_active": 3, "idx": {"QUEDA_DESC": 2.465238056641649, "REAJUSTE": 1.6122693800960228, "UPSELL": 0.9571319821742797, "FIMBONIF": 0.9800097380881228, "VENDA_NOVA": 1.0911371477505047, "CHURN_INAD": 1.8709101941785782, "CHURN_SOLIC": 0.9669794319356905, "DOWNSELL": 1.908149195243479}, "forte_time": "Queda Desconto", "forte_time_idx": 2.465238056641649, "forte_time_code": "QUEDA_DESC", "ofen_time": "Downsell", "ofen_time_idx": 1.908149195243479, "ofen_time_code": "DOWNSELL", "cont_label": "Churn Solicitação", "cont_idx": 0.9669794319356905, "cont_code": "CHURN_SOLIC", "forte_si": "Queda Desconto", "forte_si_pct": 0.04884807077466713, "ofen_si": "Churn Inadimplência", "ofen_si_pct": 0.07958057662910799, "priority": "red"}, "regiao": ""}, "Grasielle Ferreira Maciel": {"monthly": {"QUEDA_DESC": {"value": [1007.0, 3081.05, 2370.45, 6490.74, 3820.4099999999994, 1888.8500000000001, 5236.509999999999], "pct": [0.005528047071073778, 0.017513129376044215, 0.013003424298149987, 0.036161138840156475, 0.020077187977619593, 0.009726421762797251, 0.0286456756326667], "idx": [0.4154334889713114, 1.3161140536530924, 0.9772091039205767, 2.7175145002200924, 1.5088034061647841, 0.7309419178553568, 2.1527264183927532]}, "REAJUSTE": {"value": [145.9, 249.9, 239.58, 296.0, 561.38, 243.6, 471.27000000000004], "pct": [0.0008009355190364094, 0.0014204673832211257, 0.0013142485154087934, 0.0016490719234919773, 0.0029501890600422704, 0.0012543909476228445, 0.0025780238279706977], "idx": [0.24629415704038055, 0.43680522144242495, 0.40414205956755156, 0.5071029685186832, 0.9072070227663768, 0.38573537282444864, 0.7927632005931728]}, "UPSELL": {"value": [1200.0, 1178.14, 1318.3, 1023.06, 1295.54, 1218.6, 3119.94], "pct": [0.0065875436795318106, 0.0066967164580557705, 0.007231713072307422, 0.005699660547458453, 0.006808379234826967, 0.006275044370990141, 0.017067243112947775], "idx": [1.5629065000791003, 1.58880793671275, 1.715736838684546, 1.3522546416724983, 1.6153001298764675, 1.4887654811576574, 4.0492339022414106]}, "FIMBONIF": {"value": [0.0, 0.0, 436.84, 51.0, 0.2, 0.0, 0.0], "pct": [0.0, 0.0, 0.0023963449431136873, 0.0002841306354665231, 1.0510488653112938e-06, 0.0, 0.0], "idx": [null, null, null, null, null, null, null]}, "VENDA_NOVA": {"value": [4799.4, 5525.6, 3453.0, 5935.5, 3170.0, 6462.0, 6716.0], "pct": [0.026346880946287475, 0.03140830161155123, 0.01894189883841123, 0.03306779189826564, 0.016659124515184004, 0.03327534607364049, 0.03673904137469222], "idx": [0.7644400596393098, 0.9112943579944653, 0.5495886327962938, 0.9594435433319265, 0.483355208682507, 0.9654656119982478, 1.0659627998022365]}, "CHURN_INAD": {"value": [7073.1, 6211.18, 9069.85, 2686.3, 8832.7, 10942.52, 7019.74], "pct": [0.03882862933308038, 0.03530523649986151, 0.049753889713166556, 0.014965884824582765, 0.04641799656317532, 0.056347282562323193, 0.03840061320720398], "idx": [0.9099274010888881, 0.827358643478517, 1.165954820923709, 0.350717213492426, 1.087780014436381, 1.3204673268410845, 0.8998970804792693]}, "CHURN_SOLIC": {"value": [4195.74, 1547.0, 4380.4, 2786.5, 3110.01, 7503.1, 763.0], "pct": [0.023033017098299, 0.008793369515178397, 0.024029277055249508, 0.015524117955440522, 0.016343862408033885, 0.038636374052171456, 0.004173896451591746], "idx": [1.2871762946678218, 0.49140834402576794, 1.3428512500781655, 0.8675492464834681, 0.9133598158309615, 2.159153730474448, 0.23325387837635034]}, "DOWNSELL": {"value": [3908.53, 2409.48, 990.31, 1969.29, 1530.1, 2739.8, 3119.0], "pct": [0.02145634341480039, 0.013695829333828083, 0.005432479536248777, 0.010971286649369985, 0.008041049344064051, 0.014108293589068432, 0.017062100960045422], "idx": [0.9280826617760752, 0.5924057747231143, 0.23497899761280117, 0.4745571377102392, 0.3478112898567789, 0.6102466955403537, 0.7380120539815845]}}, "goal_months_fatur": [93.6, 98.72, 98.26, 103.13, 96.08, 93.33, 100.67], "goal_months_pond": [74.88, 98.72, 98.26, 103.13, 96.08, 93.33, 100.67], "w3": {"carteira": 189095.58333333328, "growth_mean": -1.915811673260376, "growth_min": -5.856074704851248, "pct": {"QUEDA_DESC": 0.019294950922086586, "REAJUSTE": 0.0022497440668233486, "UPSELL": 0.00993162628952642, "FIMBONIF": 3.5255538755312027e-07, "VENDA_NOVA": 0.02881787737859205, "CHURN_INAD": 0.04723353753635178, "CHURN_SOLIC": 0.020053544349484635, "DOWNSELL": 0.013024982515456252}, "fatur_mean": 96.69333333333333, "pond_mean": 96.69333333333333, "n_active": 3, "idx": {"QUEDA_DESC": 1.3186262024911755, "REAJUSTE": 0.5890584332682678, "UPSELL": 2.106019613868275, "FIMBONIF": 0.6156095885392738, "VENDA_NOVA": 0.7945360083227248, "CHURN_INAD": 1.0105442477997661, "CHURN_SOLIC": 1.0818650284716012, "DOWNSELL": 0.6065226534800215}, "forte_time": "Upsell", "forte_time_idx": 2.106019613868275, "forte_time_code": "UPSELL", "ofen_time": "Churn Solicitação", "ofen_time_idx": 1.0818650284716012, "ofen_time_code": "CHURN_SOLIC", "cont_label": "Downsell", "cont_idx": 0.6065226534800215, "cont_code": "DOWNSELL", "forte_si": "Venda Nova", "forte_si_pct": 0.02881787737859205, "ofen_si": "Churn Inadimplência", "ofen_si_pct": 0.04723353753635178, "priority": "red"}, "w6": {"carteira": 184167.32499999995, "growth_mean": -0.9859613823272472, "growth_min": -5.856074704851248, "pct": {"QUEDA_DESC": 0.020713057179569363, "REAJUSTE": 0.0018658123348789845, "UPSELL": 0.008283753193823426, "FIMBONIF": 0.0004416635795736296, "VENDA_NOVA": 0.02829139208054415, "CHURN_INAD": 0.04050871492359825, "CHURN_SOLIC": 0.018180939534198054, "DOWNSELL": 0.011545641986166658}, "fatur_mean": 98.36500000000001, "pond_mean": 98.36500000000001, "n_active": 6, "idx": {"QUEDA_DESC": 1.0453353841550337, "REAJUSTE": 0.4808691856620195, "UPSELL": 1.6867853349263606, "FIMBONIF": 0.8421473996580152, "VENDA_NOVA": 0.852964593134758, "CHURN_INAD": 0.9523450433998616, "CHURN_SOLIC": 1.0330205680643094, "DOWNSELL": 0.58301620577794}, "forte_time": "Upsell", "forte_time_idx": 1.6867853349263606, "forte_time_code": "UPSELL", "ofen_time": "Churn Solicitação", "ofen_time_idx": 1.0330205680643094, "ofen_time_code": "CHURN_SOLIC", "cont_label": "Downsell", "cont_idx": 0.58301620577794, "cont_code": "DOWNSELL", "forte_si": "Venda Nova", "forte_si_pct": 0.02829139208054415, "ofen_si": "Churn Inadimplência", "ofen_si_pct": 0.04050871492359825, "priority": "red"}, "regiao": ""}, "Kamila Conceição": {"monthly": {"QUEDA_DESC": {"value": [4632.91, 2863.4700000000003, 4262.1, 4113.3099999999995, 2803.3299999999995, 3030.65, 2689.0899999999997], "pct": [0.028059418805650924, 0.017212857258443716, 0.02582538402390276, 0.023256793547707155, 0.0155288140811539, 0.01653893759734666, 0.014825863953957007], "idx": [2.108669138136435, 1.2935485631911325, 1.9407811205540115, 1.7477511970484665, 1.1669924894593022, 1.242903409035176, 1.1141656918290304]}, "REAJUSTE": {"value": [58.86, 950.0500000000001, 136.62, 510.0, 610.1, 505.49, 1131.8899999999999], "pct": [0.00035648812320995083, 0.0057109294102555466, 0.0008278228960713252, 0.0028835572104535397, 0.003379598360133126, 0.0027585724402629016, 0.00624049293658613], "idx": [0.1096229842653674, 1.7561570333504801, 0.25456224317771226, 0.8867171895195737, 1.0392538593437037, 0.848283360721441, 1.9190021054155053]}, "UPSELL": {"value": [170.0, 309.26, 1299.63, 1353.08, 103.58, 41.38, 895.6500000000001], "pct": [0.0010296123164405648, 0.0018590200825384245, 0.007874860711617452, 0.00765035998102054, 0.0005737728210827556, 0.00022581995208229415, 0.004938021803049209], "idx": [0.24427736045627652, 0.4410558338769735, 1.8683247644559335, 1.8150615652740258, 0.1361286262776925, 0.05357618683479489, 1.1715544896495376]}, "FIMBONIF": {"value": [0.0, 0.0, 271.45, 228.0, 0.0, 0.25, 63.8], "pct": [0.0, 0.0, 0.0016447996277160093, 0.001289119694085112, 0.0, 1.3643061387282148e-06, 0.00035175100880314796], "idx": [null, null, null, null, null, null, null]}, "VENDA_NOVA": {"value": [9420.939999999999, 3111.6, 6473.69, 3039.8, 7190.95, 2443.0, 10794.199999999999], "pct": [0.05705832856733867, 0.01870441340240109, 0.03922609284195561, 0.017187131781052297, 0.03983367124700754, 0.013331999587652115, 0.05951208055208369], "idx": [1.6555155876651066, 0.5426981252923063, 1.138123211345325, 0.4986750450848961, 1.1557517599822709, 0.3868205341145749, 1.7267098332907116]}, "CHURN_INAD": {"value": [4281.16, 7010.08, 3419.3100000000004, 4387.66, 2695.3, 10241.97, 4430.24], "pct": [0.025929029792074638, 0.042138910626013576, 0.02071865837187559, 0.02480797770591878, 0.014930390854067882, 0.055892730174680855, 0.024425413624452323], "idx": [0.6076324376291623, 0.9875020079057624, 0.485530272125979, 0.5813612035227341, 0.3498854319719431, 1.3098151436491896, 0.572396026374383]}, "CHURN_SOLIC": {"value": [3169.1, 818.0, 1860.32, 817.0, 5279.77, 388.22, 3427.4], "pct": [0.019193790541363494, 0.004917151999988461, 0.011272255087244968, 0.004619345570471651, 0.029246848113227464, 0.0021186037167082706, 0.01889641704658165], "idx": [1.0726250965830735, 0.27478994456748934, 0.6299382957008272, 0.258147340828789, 1.6344298024194523, 0.11839597349768906, 1.0560066869534475]}, "DOWNSELL": {"value": [4891.13, 2401.46, 1906.45, 3801.0000000000005, 3108.9700000000003, 1663.6, 5887.41], "pct": [0.029623339348893763, 0.01443562816857248, 0.011551771045346054, 0.021490982268497855, 0.017221881517297304, 0.009078638769553032, 0.03245928537206491], "idx": [1.2813417040413753, 0.6244053777521568, 0.4996656798752258, 0.9295809468714863, 0.7449232765514147, 0.39269166566090014, 1.4040090329033112]}}, "goal_months_fatur": [98.24, 97.52, 100.48, 100.61, 98.12000000000002, 96.37999999999998, 101.18], "goal_months_pond": [734.466, 95.22399999999999, 98.38, 99.693, 101.59900000000002, 98.417, 109.02], "w3": {"carteira": 181715.34666666665, "growth_mean": -0.8743149513764861, "growth_min": -3.423327877745957, "pct": {"QUEDA_DESC": 0.01563447108594974, "REAJUSTE": 0.00412271177829706, "UPSELL": 0.001908864641115251, "FIMBONIF": 0.00011749145238219102, "VENDA_NOVA": 0.037472802700722174, "CHURN_INAD": 0.03185845392915263, "CHURN_SOLIC": 0.01668431820581509, "DOWNSELL": 0.019554356480329566}, "fatur_mean": 98.56, "pond_mean": 103.012, "n_active": 3, "idx": {"QUEDA_DESC": 1.0684672544269183, "REAJUSTE": 1.0794641829500995, "UPSELL": 0.40477825657292626, "FIMBONIF": 6.0, "VENDA_NOVA": 1.0331604471540525, "CHURN_INAD": 0.6815999614071183, "CHURN_SOLIC": 0.900099258075906, "DOWNSELL": 0.9105701420688851}, "forte_time": "Reajuste", "forte_time_idx": 1.0794641829500995, "forte_time_code": "REAJUSTE", "ofen_time": "Downsell", "ofen_time_idx": 0.9105701420688851, "ofen_time_code": "DOWNSELL", "cont_label": "Churn Inadimplência", "cont_idx": 0.6815999614071183, "cont_code": "CHURN_INAD", "forte_si": "Venda Nova", "forte_si_pct": 0.037472802700722174, "ofen_si": "Churn Inadimplência", "ofen_si_pct": 0.03185845392915263, "priority": "yellow"}, "w6": {"carteira": 175567.1133333333, "growth_mean": -0.18381644860005697, "growth_min": -3.423327877745957, "pct": {"QUEDA_DESC": 0.018760109856565014, "REAJUSTE": 0.0036492692424135477, "UPSELL": 0.0037996675687212043, "FIMBONIF": 0.0005349331368703183, "VENDA_NOVA": 0.03137759247014637, "CHURN_INAD": 0.030552950558280337, "CHURN_SOLIC": 0.011952418803415236, "DOWNSELL": 0.017817393439705318}, "fatur_mean": 99.04833333333333, "pond_mean": 100.38883333333332, "n_active": 6, "idx": {"QUEDA_DESC": 0.9467750932994208, "REAJUSTE": 0.9405131995628458, "UPSELL": 0.7737101024802507, "FIMBONIF": 1.0199902619118772, "VENDA_NOVA": 0.9460112573694137, "CHURN_INAD": 0.718288671469777, "CHURN_SOLIC": 0.6791230144526831, "DOWNSELL": 0.8997186239202523}, "forte_time": "Queda Desconto", "forte_time_idx": 0.9467750932994208, "forte_time_code": "QUEDA_DESC", "ofen_time": "Downsell", "ofen_time_idx": 0.8997186239202523, "ofen_time_code": "DOWNSELL", "cont_label": "Churn Solicitação", "cont_idx": 0.6791230144526831, "cont_code": "CHURN_SOLIC", "forte_si": "Venda Nova", "forte_si_pct": 0.03137759247014637, "ofen_si": "Churn Inadimplência", "ofen_si_pct": 0.030552950558280337, "priority": "yellow"}, "regiao": ""}, "Leandro Novaes": {"monthly": {"QUEDA_DESC": {"value": [1620.0, 4587.0, 4375.8, 2288.0, 2377.0, 1957.0, 1304.3], "pct": [0.009920264951906005, 0.030253935188116553, 0.02735674671902531, 0.014361235410211932, 0.014766901019518774, 0.012619437299484268, 0.008715770653412832], "idx": [0.7455092598713381, 2.2735873426399498, 2.0558632352928967, 1.0792487935967976, 1.1097346192895372, 0.9483524287648899, 0.6549913495793993]}, "REAJUSTE": {"value": [101.0, 1558.8, 478.0, 448.6, 219.93, 194.67, 228.8], "pct": [0.0006184856544089546, 0.010281193409905402, 0.0029883735389401016, 0.002815756208488231, 0.0013662955579397409, 0.001255301920843435, 0.0015289184432269079], "idx": [0.1901893464251483, 3.161550217311135, 0.9189490591958288, 0.8658678324506934, 0.42014694655524154, 0.38601550446565946, 0.4701548004901805]}, "UPSELL": {"value": [2648.07, 572.22, 1309.21, 2580.4399999999996, 150.8, 1043.1399999999999, 1028.67], "pct": [0.016215775315551687, 0.0037741240011650436, 0.008184955064677344, 0.016196812194898283, 0.0009368315834006862, 0.006726540533768022, 0.0068739184221775496], "idx": [3.8472216470068528, 0.8954176580039942, 1.9418952033952583, 3.842722612773034, 0.22226496588184905, 1.5958837519265994, 1.6308494190961191]}, "FIMBONIF": {"value": [0.0, 0.0, 0.0, 230.0, 0.0, 0.0, 0.0], "pct": [0.0, 0.0, 0.0, 0.0014436556574950806, 0.0, 0.0, 0.0], "idx": [null, null, null, null, null, null, null]}, "VENDA_NOVA": {"value": [4866.0, 5410.0, 8684.0, 6846.0, 5218.0, 4866.0, 1718.0], "pct": [0.02979753657776211, 0.0356820992735362, 0.054290869899907626, 0.042970724483527484, 0.03241636075719351, 0.031377711752320105, 0.011480252995908338], "idx": [0.864558908701437, 1.035296214087966, 1.5752193175641702, 1.2467716104194402, 0.9405426320116339, 0.9104068102857755, 0.33309313928877615]}, "CHURN_INAD": {"value": [10282.8, 2724.49, 5019.200000000001, 2900.0, 6085.0, 8037.69, 2179.6], "pct": [0.06296796323917225, 0.01796959753230252, 0.03137917252436854, 0.018202614811894495, 0.0378025211206444, 0.05182990546126301, 0.01456481922577521], "idx": [1.4756193078715403, 0.4211075554822877, 0.7353535108975051, 0.42656818624030646, 0.885881124024393, 1.214605098997667, 0.3413184635427799]}, "CHURN_SOLIC": {"value": [7088.64, 2903.34, 6237.27, 7058.6, 3674.0, 7164.160000000001, 0.0], "pct": [0.04340814009177715, 0.019149217394607874, 0.03899433603185132, 0.0443051644521512, 0.022824398126088337, 0.046197070987978144, 0.0], "idx": [2.425818931288935, 1.0701341724615079, 2.179158064803289, 2.4759482082084707, 1.2755178395682787, 2.581675444646957, 0.0]}, "DOWNSELL": {"value": [3721.88, 1258.6, 4226.0, 1114.7, 1835.8, 4192.72, 1394.92], "pct": [0.022791380073580197, 0.008301199657240787, 0.026420222961424416, 0.006996708527868549, 0.011404744169807558, 0.027036161039496007, 0.009321323928435658], "idx": [0.9858289586122051, 0.35906395255178414, 1.142792617396419, 0.302638886257592, 0.49330611098855975, 1.1694346896234886, 0.40318888244546996]}}, "goal_months_fatur": [86.91, 99.9, 101.45, 100.3, 97.89, 90.82, 101.28], "goal_months_pond": [1342.9279999999999, 99.9, 101.45, 100.3, 97.33846153846154, 111.973, 275.601], "w3": {"carteira": 155231.53333333333, "growth_mean": -3.030556770676469, "growth_min": -7.3084145982321385, "pct": {"QUEDA_DESC": 0.012107290915548517, "REAJUSTE": 0.0013815921421463768, "UPSELL": 0.004772677200895179, "FIMBONIF": 0.0, "VENDA_NOVA": 0.025342789029548552, "CHURN_INAD": 0.03500639689616328, "CHURN_SOLIC": 0.02327310645216844, "DOWNSELL": 0.015940575647645474}, "fatur_mean": 96.66333333333334, "pond_mean": 161.63748717948718, "n_active": 3, "idx": {"QUEDA_DESC": 0.8274180694676351, "REAJUSTE": 0.3617471492291295, "UPSELL": 1.0120549749588368, "FIMBONIF": 0.0, "VENDA_NOVA": 0.6987245511100935, "CHURN_INAD": 0.7489490490181422, "CHURN_SOLIC": 1.2555566006537333, "DOWNSELL": 0.7422904582279414}, "forte_time": "Upsell", "forte_time_idx": 1.0120549749588368, "forte_time_code": "UPSELL", "ofen_time": "Churn Solicitação", "ofen_time_idx": 1.2555566006537333, "ofen_time_code": "CHURN_SOLIC", "cont_label": "Downsell", "cont_idx": 0.7422904582279414, "cont_code": "DOWNSELL", "forte_si": "Venda Nova", "forte_si_pct": 0.025342789029548552, "ofen_si": "Churn Inadimplência", "ofen_si_pct": 0.03500639689616328, "priority": "red"}, "w6": {"carteira": 156097.04, "growth_mean": -0.8672409327351502, "growth_min": -7.3084145982321385, "pct": {"QUEDA_DESC": 0.018032692996612875, "REAJUSTE": 0.0033406569827760134, "UPSELL": 0.0071370988200673115, "FIMBONIF": 0.0002455737362690115, "VENDA_NOVA": 0.03495902292573901, "CHURN_INAD": 0.02877054341752199, "CHURN_SOLIC": 0.02886812160777253, "DOWNSELL": 0.014972246324038773}, "fatur_mean": 98.60666666666667, "pond_mean": 131.09374358974358, "n_active": 6, "idx": {"QUEDA_DESC": 0.9100642120351647, "REAJUSTE": 0.8609756580839799, "UPSELL": 1.4532969949643322, "FIMBONIF": 0.46825070707188376, "VENDA_NOVA": 1.0539887426305863, "CHURN_INAD": 0.6763849327552004, "CHURN_SOLIC": 1.6402542523238275, "DOWNSELL": 0.7560482348467472}, "forte_time": "Upsell", "forte_time_idx": 1.4532969949643322, "forte_time_code": "UPSELL", "ofen_time": "Churn Solicitação", "ofen_time_idx": 1.6402542523238275, "ofen_time_code": "CHURN_SOLIC", "cont_label": "Churn Inadimplência", "cont_idx": 0.6763849327552004, "cont_code": "CHURN_INAD", "forte_si": "Venda Nova", "forte_si_pct": 0.03495902292573901, "ofen_si": "Churn Solicitação", "ofen_si_pct": 0.02886812160777253, "priority": "yellow"}, "regiao": ""}, "Maria Aparecida": {"monthly": {"QUEDA_DESC": {"value": [1982.45, 4755.51, 2103.25, 7138.990000000001, 3818.4100000000003, 1642.1999999999998, 1256.39], "pct": [0.012940780125802563, 0.0322884187921665, 0.014019647837378081, 0.046265355352968746, 0.0227712674397968, 0.00953118823365468, 0.007635853205205889], "idx": [0.9725013858517153, 2.4264790620878496, 1.0535784410569007, 3.4768477449031527, 1.7112638440280301, 0.7162700915968068, 0.5738354065236426]}, "REAJUSTE": {"value": [0.0, 337.38, 147.92, 984.6, 187.0, 523.61, 1063.15], "pct": [0.0, 0.002290704200411971, 0.0009859913505788497, 0.006380856238842333, 0.00111518328603843, 0.003038987620889007, 0.006461415114028798], "idx": [0.0, 0.7044100887772943, 0.30320032358170995, 1.9621649573391993, 0.34292788976420824, 0.9345132992022851, 1.9869374637202901]}, "UPSELL": {"value": [786.03, 171.07999999999998, 169.3, 1979.59, 699.09, 171.77, 63.07], "pct": [0.005130944741246734, 0.0011615794493048787, 0.0011285041620673288, 0.012829046518230644, 0.0041690560611583214, 0.0009969383771129367, 0.0003833151025177974], "idx": [1.2173258012022983, 0.27558679835667116, 0.2677396274033813, 3.0437141928119797, 0.9891159943916463, 0.23652541001122543, 0.09094219248442696]}, "FIMBONIF": {"value": [0.2, 0.0, 231.2, 988.0, 0.4, 0.0, 0.0], "pct": [1.3055340740803112e-06, 0.0, 0.0015411114132898192, 0.006402890477327061, 2.385418793665091e-06, 0.0, 0.0], "idx": [null, null, null, null, null, null, null]}, "VENDA_NOVA": {"value": [4277.5, 948.1, 6951.4, 4914.3, 3822.5, 6210.150000000001, 6936.18], "pct": [0.027922110009392653, 0.006437301121615359, 0.046335994283489834, 0.03184789946632427, 0.022795658346962025, 0.036043179033753876, 0.042155423303978055], "idx": [0.8101444525577959, 0.18677470260544243, 1.3444130371913665, 0.9240490446310011, 0.6614033160811188, 1.0457727419926568, 1.22311610130664]}, "CHURN_INAD": {"value": [3504.7999999999997, 7043.8, 3628.3, 4201.4, 9408.96, 11288.359999999999, 4710.860000000001], "pct": [0.02287817911418337, 0.047825188946771714, 0.024185184000170636, 0.027227838108746877, 0.05611077503210773, 0.0655166751974535, 0.028630787757206136], "idx": [0.53613744344252, 1.1207567877716957, 0.5667663783172222, 0.6380692904463011, 1.3149249039947657, 1.5353469595593943, 0.6709466376359303]}, "CHURN_SOLIC": {"value": [8872.8, 3124.93, 2353.5, 4023.9300000000003, 1863.31, 0.0, 1638.84], "pct": [0.057918713662498914, 0.021217292895232023, 0.015687740965300994, 0.026077715666427817, 0.011111936731060252, 0.0, 0.009960236603936372], "idx": [3.2367273000256476, 1.1857064289586077, 0.8766931488500475, 1.4573261193555263, 0.6209790704807704, 0.0, 0.5566175022210371]}, "DOWNSELL": {"value": [1958.37, 913.96, 1918.7599999999998, 1007.53, 2524.16, 1772.24, 1162.2], "pct": [0.012783593823283293, 0.006205501247876356, 0.012789891588944521, 0.006529457735446695, 0.015052946755544189, 0.010285929262703794, 0.007063402761157192], "idx": [0.5529475154836082, 0.26841563841727056, 0.5532199219698916, 0.28242820306873473, 0.6511071631535478, 0.44491237040816956, 0.305523709657321]}}, "goal_months_fatur": [94.52, 96.29, 99.49, 104.18, 97.23, 97.7, 100.67], "goal_months_pond": [448.5399999999999, 96.29, 99.49, 104.18, 124.96153846153847, 90.24799999999999, 89.123], "w3": {"carteira": 168173.7366666667, "growth_mean": -1.5544279852426264, "growth_min": -3.1422107965962933, "pct": {"QUEDA_DESC": 0.013313612722049879, "REAJUSTE": 0.0035157292990714902, "UPSELL": 0.0018511213829840768, "FIMBONIF": 7.928308901027172e-07, "VENDA_NOVA": 0.03363353148225424, "CHURN_INAD": 0.050360974913225144, "CHURN_SOLIC": 0.0069415317544330776, "DOWNSELL": 0.010819366741786733}, "fatur_mean": 98.53333333333335, "pond_mean": 101.44417948717948, "n_active": 3, "idx": {"QUEDA_DESC": 0.9098586804395113, "REAJUSTE": 0.9205358170499005, "UPSELL": 0.3925336925259326, "FIMBONIF": 1.3843904114607262, "VENDA_NOVA": 0.9273081253915927, "CHURN_INAD": 1.0774546258149857, "CHURN_SOLIC": 0.37448743814403374, "DOWNSELL": 0.5038157262334043}, "forte_time": "Venda Nova", "forte_time_idx": 0.9273081253915927, "forte_time_code": "VENDA_NOVA", "ofen_time": "Churn Inadimplência", "ofen_time_idx": 1.0774546258149857, "ofen_time_code": "CHURN_INAD", "cont_label": "Churn Solicitação", "cont_idx": 0.37448743814403374, "cont_code": "CHURN_SOLIC", "forte_si": "Venda Nova", "forte_si_pct": 0.03363353148225424, "ofen_si": "Churn Inadimplência", "ofen_si_pct": 0.050360974913225144, "priority": "yellow"}, "w6": {"carteira": 159355.05666666667, "growth_mean": -0.40772250080334177, "growth_min": -3.3069979526381363, "pct": {"QUEDA_DESC": 0.021665194726484677, "REAJUSTE": 0.0033924872627721448, "UPSELL": 0.003403197099675762, "FIMBONIF": 0.0012755583093409628, "VENDA_NOVA": 0.031149131822341292, "CHURN_INAD": 0.04212990459020472, "CHURN_SOLIC": 0.01360118956166583, "DOWNSELL": 0.009725504579218771}, "fatur_mean": 99.26, "pond_mean": 100.71542307692307, "n_active": 6, "idx": {"QUEDA_DESC": 1.093387347693998, "REAJUSTE": 0.8743336920450914, "UPSELL": 0.6929785117061712, "FIMBONIF": 2.4321863133036197, "VENDA_NOVA": 0.9391233374343473, "CHURN_INAD": 0.9904586183754118, "CHURN_SOLIC": 0.7728043174509209, "DOWNSELL": 0.4911053699608681}, "forte_time": "Queda Desconto", "forte_time_idx": 1.093387347693998, "forte_time_code": "QUEDA_DESC", "ofen_time": "Churn Inadimplência", "ofen_time_idx": 0.9904586183754118, "ofen_time_code": "CHURN_INAD", "cont_label": "Downsell", "cont_idx": 0.4911053699608681, "cont_code": "DOWNSELL", "forte_si": "Venda Nova", "forte_si_pct": 0.031149131822341292, "ofen_si": "Churn Inadimplência", "ofen_si_pct": 0.04212990459020472, "priority": "yellow"}, "regiao": ""}, "Priscilla Carlos": {"monthly": {"QUEDA_DESC": {"value": [2385.0, 2528.0, 2211.0, 1955.8, 920.0, 808.5, 5234.150000000001], "pct": [0.014514712898066, 0.015573291804555186, 0.013762735665840032, 0.012585001686858673, 0.0055472146349993074, 0.005040825071773306, 0.028592920641623353], "idx": [1.0907826476754647, 1.1703349964199947, 1.0342714564366493, 0.9457645877942926, 0.41687393400629136, 0.37881868948233804, 2.1487618736434033]}, "REAJUSTE": {"value": [0.0, 3433.5, 442.18, 1533.23, 216.9, 201.64, 1143.8600000000001], "pct": [0.0, 0.021151462583441548, 0.0027524226398557873, 0.009865887174732756, 0.0013078161460123368, 0.0012571823963789355, 0.006248636016378455], "idx": [0.0, 6.50424600150998, 0.8463922473031483, 3.03384018738448, 0.40216405389715926, 0.38659376591847694, 1.9215061683837402]}, "UPSELL": {"value": [924.5, 436.43, 62.35, 2655.1699999999996, 0.7100000000000001, 623.29, 1.0899999999999999], "pct": [0.005626353070969399, 0.0026885489486795965, 0.00038810790084356674, 0.017085243342313396, 4.281002598749466e-06, 0.003886080221379819, 5.954411604438055e-06], "idx": [1.334862311984404, 0.6378630384991714, 0.09207929244479422, 4.053504488797953, 0.001015675510316554, 0.9219794711486465, 0.0014126947848008909]}, "FIMBONIF": {"value": [0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 839.0], "pct": [0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.004583258106535348], "idx": [null, null, null, null, null, null, null]}, "VENDA_NOVA": {"value": [7239.84, 3447.0, 11200.85, 7378.62, 4976.0, 4794.2, 11529.9], "pct": [0.04406046080835814, 0.021234626918632014, 0.06972154580855917, 0.047479264314699426, 0.030003195677996256, 0.029890814544335908, 0.06298511042019297], "idx": [1.2783897022475756, 0.616110859619035, 2.0229317749109135, 1.3775843796596994, 0.8705259928192446, 0.8672653168897944, 1.8274778583529216]}, "CHURN_INAD": {"value": [7527.51, 8909.48, 11151.4, 1091.8, 11249.0, 4710.0, 5301.08], "pct": [0.04581117253137141, 0.054885257858721656, 0.06941373609409703, 0.0070254140718438995, 0.06782675807511654, 0.029365845501610727, 0.028958543365187606], "idx": [1.0735594296858606, 1.286205588486532, 1.626672421067429, 0.16463668375025484, 1.5894824710434696, 0.6881723083460344, 0.6786274085950227]}, "CHURN_SOLIC": {"value": [6653.9, 3347.63, 5268.29, 0.0, 1547.0, 3883.6, 6323.0], "pct": [0.04049452752722908, 0.02062247580841894, 0.032793343591582265, 0.0, 0.009327762000373836, 0.024213417747357836, 0.03454105006868058], "idx": [2.2629947120853826, 1.152465692387205, 1.8326220274936935, 0.0, 0.5212723143452704, 1.3531417618575827, 1.9302907930643356]}, "DOWNSELL": {"value": [1550.5, 1563.82, 994.58, 2031.0, 2030.8000000000002, 9068.51, 7099.139999999999], "pct": [0.00943608484211796, 0.009633633382040938, 0.006190927923351959, 0.013068891720017366, 0.012244873348648473, 0.05654022581524668, 0.03878091889681686], "idx": [0.4081528044045423, 0.4166976608704035, 0.26778527705727295, 0.5652879234590619, 0.529645449405216, 2.445617235779253, 1.677447910861317]}}, "goal_months_fatur": [95.68, 97.71, 95.75, 104.37, 93.38, 91.19, 101.87], "goal_months_pond": [76.54400000000001, 97.71, 95.75, 104.37, 93.38, 91.19, 101.87], "w3": {"carteira": 169765.65333333335, "growth_mean": -4.081536850907662, "growth_min": -7.004458683034734, "pct": {"QUEDA_DESC": 0.013671100648234775, "REAJUSTE": 0.003067758346721724, "UPSELL": 0.0012273585925193819, "FIMBONIF": 0.0016473689534687189, "VENDA_NOVA": 0.04182255476254953, "CHURN_INAD": 0.04174397585251638, "CHURN_SOLIC": 0.023078087880202543, "DOWNSELL": 0.03573249288587939}, "fatur_mean": 95.48, "pond_mean": 95.48, "n_active": 3, "idx": {"QUEDA_DESC": 0.9342895768146889, "REAJUSTE": 0.803242000729963, "UPSELL": 0.26026364602758667, "FIMBONIF": 6.0, "VENDA_NOVA": 1.153087206331855, "CHURN_INAD": 0.8930970847903801, "CHURN_SOLIC": 1.2450355790709429, "DOWNSELL": 1.6639228785821054}, "forte_time": "Venda Nova", "forte_time_idx": 1.153087206331855, "forte_time_code": "VENDA_NOVA", "ofen_time": "Downsell", "ofen_time_idx": 1.6639228785821054, "ofen_time_code": "DOWNSELL", "cont_label": "Churn Inadimplência", "cont_idx": 0.8930970847903801, "cont_code": "CHURN_INAD", "forte_si": "Venda Nova", "forte_si_pct": 0.04182255476254953, "ofen_si": "Churn Inadimplência", "ofen_si_pct": 0.04174397585251638, "priority": "red"}, "w6": {"carteira": 164614.095, "growth_mean": -1.696527453138209, "growth_min": -7.004458683034734, "pct": {"QUEDA_DESC": 0.013827744620937027, "REAJUSTE": 0.007058235201548203, "UPSELL": 0.0038261608156944273, "FIMBONIF": 0.0008494614834369641, "VENDA_NOVA": 0.04386680861076933, "CHURN_INAD": 0.04294160432211673, "CHURN_SOLIC": 0.02062350736126211, "DOWNSELL": 0.023071991496232444}, "fatur_mean": 97.37833333333333, "pond_mean": 97.37833333333333, "n_active": 6, "idx": {"QUEDA_DESC": 0.6978511481918009, "REAJUSTE": 1.8190938874887561, "UPSELL": 0.7791048093749872, "FIMBONIF": 1.619721010450263, "VENDA_NOVA": 1.3225519073886978, "CHURN_INAD": 1.009541381624588, "CHURN_SOLIC": 1.171804529118862, "DOWNSELL": 1.1650582062037766}, "forte_time": "Reajuste", "forte_time_idx": 1.8190938874887561, "forte_time_code": "REAJUSTE", "ofen_time": "Churn Solicitação", "ofen_time_idx": 1.171804529118862, "ofen_time_code": "CHURN_SOLIC", "cont_label": "Churn Inadimplência", "cont_idx": 1.009541381624588, "cont_code": "CHURN_INAD", "forte_si": "Venda Nova", "forte_si_pct": 0.04386680861076933, "ofen_si": "Churn Inadimplência", "ofen_si_pct": 0.04294160432211673, "priority": "red"}, "regiao": ""}, "Samara Campelo": {"monthly": {"QUEDA_DESC": {"value": [1136.57, 1463.8, 1990.0099999999998, 4033.07, 2790.77, 1285.9, 1293.06], "pct": [0.009692567124461954, 0.012574338539368339, 0.01877262372794888, 0.035724991257139994, 0.024107016678834903, 0.01106882270128683, 0.011503686213218269], "idx": [0.7283977371816631, 0.9449632508106578, 1.410765225436581, 2.684737950058817, 1.8116455809470295, 0.8318235308924837, 0.864503582937139]}, "REAJUSTE": {"value": [74.58, 1343.24, 406.0, 265.1, 335.39, 931.32, 253.77], "pct": [0.0006360115577064083, 0.011538703716095866, 0.0038299733335748296, 0.002348259559657485, 0.0028971403318490733, 0.008016654450705691, 0.002257660472312499], "idx": [0.19557870359114177, 3.548244818151645, 1.1777478102292376, 0.7221088277539156, 0.8908941093271942, 2.465186152058787, 0.6942488748414679]}, "UPSELL": {"value": [106.2, 0.86, 898.96, 156.7, 1435.2600000000002, 1472.72, 0.9], "pct": [0.0009056640845859556, 7.387574220424083e-06, 0.008480277901355736, 0.0013880508223248881, 0.012397953524820959, 0.012676939551006407, 8.006834634043618e-06], "idx": [0.21487042113824406, 0.0017527151743665088, 2.0119610736984153, 0.3293175359720561, 2.9414366104056584, 3.007626543249863, 0.0018996358131920005]}, "FIMBONIF": {"value": [0.0, 0.0, 0.0, 0.18, 0.0, 0.0, 0.0], "pct": [0.0, 0.0, 0.0, 1.5944425527663043e-06, 0.0, 0.0, 0.0], "idx": [null, null, null, null, null, null, null]}, "VENDA_NOVA": {"value": [2773.2, 2343.3, 7252.89, 5829.85, 2084.49, 3387.0, 7506.6], "pct": [0.023649601124046814, 0.020129421710139248, 0.06841964357475751, 0.05164089397913689, 0.018006082621235202, 0.02915475736002682, 0.06678233873767982], "idx": [0.6861799895998579, 0.5840439467568909, 1.9851578075376661, 1.4983317438492192, 0.5224364470659263, 0.8459090281124517, 1.9376523206508107]}, "CHURN_INAD": {"value": [4532.9, 10583.01, 3443.45, 1737.1, 3752.3, 12496.28, 5240.41], "pct": [0.038656165056682464, 0.09091019982615148, 0.032483550924872526, 0.015387256435613039, 0.03241283182920564, 0.10756599093680425, 0.04662121809398724], "idx": [0.9058857963889837, 2.13043013057909, 0.7612340064248907, 0.36059182358047154, 0.7595767436259512, 2.520749360969326, 1.09254239834107]}, "CHURN_SOLIC": {"value": [0.0, 236.0, 498.51, 1214.0, 302.4, 0.0, 210.0], "pct": [0.0, 0.0020272878093256785, 0.004702660114582237, 0.01075362921699052, 0.002612168628614925, 0.0, 0.0018682614146101778], "idx": [0.0, 0.1132928786314227, 0.26280328779928475, 0.6009554263205802, 0.14597833718781, 0.0, 0.1044058533393954]}, "DOWNSELL": {"value": [5001.25, 927.6700000000001, 3709.9399999999996, 2654.9399999999996, 3585.4399999999996, 608.8399999999999, 5468.62], "pct": [0.04265021189298974, 0.007968873229140475, 0.034997466180203454, 0.023517496172452062, 0.03097147449663061, 0.005240797895210725, 0.0486514844626929], "idx": [1.8448121105134625, 0.34468935059807365, 1.5137966866030217, 1.0172367222171916, 1.339654569013626, 0.2266879107211974, 2.104393946656705]}}, "goal_months_fatur": [92.6, 92.39, 98.27, 101.95, 96.65, 86.73, 98.14], "goal_months_pond": [74.08, 92.39, 98.27, 101.95, 96.65, 86.73, 98.14], "w3": {"carteira": 114781.0, "growth_mean": -2.5689056093381946, "growth_min": -5.188961476898916, "pct": {"QUEDA_DESC": 0.015594131432902657, "REAJUSTE": 0.004415597238799685, "UPSELL": 0.008447623445227578, "FIMBONIF": 0.0, "VENDA_NOVA": 0.03768942595028794, "CHURN_INAD": 0.062405769828339765, "CHURN_SOLIC": 0.0014880511582927487, "DOWNSELL": 0.028061845311215854}, "fatur_mean": 93.83999999999999, "pond_mean": 93.83999999999999, "n_active": 3, "idx": {"QUEDA_DESC": 1.065710423185311, "REAJUSTE": 1.1561514173048677, "UPSELL": 1.791334082413517, "FIMBONIF": 0.0, "VENDA_NOVA": 1.039132954072544, "CHURN_INAD": 1.3351486045484084, "CHURN_SOLIC": 0.08027860216016908, "DOWNSELL": 1.3067307276234252}, "forte_time": "Upsell", "forte_time_idx": 1.791334082413517, "forte_time_code": "UPSELL", "ofen_time": "Churn Inadimplência", "ofen_time_idx": 1.3351486045484084, "ofen_time_code": "CHURN_INAD", "cont_label": "Churn Solicitação", "cont_idx": 0.08027860216016908, "cont_code": "CHURN_SOLIC", "forte_si": "Venda Nova", "forte_si_pct": 0.03768942595028794, "ofen_si": "Churn Inadimplência", "ofen_si_pct": 0.062405769828339765, "priority": "red"}, "w6": {"carteira": 113275.46166666667, "growth_mean": -1.0826571341867417, "growth_min": -5.665650932479385, "pct": {"QUEDA_DESC": 0.018916438757396663, "REAJUSTE": 0.005200920464136415, "UPSELL": 0.00583444984708883, "FIMBONIF": 2.6484111879658786e-07, "VENDA_NOVA": 0.04179211982024291, "CHURN_INAD": 0.05481115011125461, "CHURN_SOLIC": 0.0036208342092095055, "DOWNSELL": 0.024947224153886692}, "fatur_mean": 95.68833333333333, "pond_mean": 95.68833333333333, "n_active": 6, "idx": {"QUEDA_DESC": 0.9546646158449663, "REAJUSTE": 1.3404147574383043, "UPSELL": 1.1880441400367683, "FIMBONIF": 0.0005049890229399906, "VENDA_NOVA": 1.2600015714047155, "CHURN_INAD": 1.2885900535218073, "CHURN_SOLIC": 0.20573173375493953, "DOWNSELL": 1.2597511674376676}, "forte_time": "Reajuste", "forte_time_idx": 1.3404147574383043, "forte_time_code": "REAJUSTE", "ofen_time": "Churn Inadimplência", "ofen_time_idx": 1.2885900535218073, "ofen_time_code": "CHURN_INAD", "cont_label": "Churn Solicitação", "cont_idx": 0.20573173375493953, "cont_code": "CHURN_SOLIC", "forte_si": "Venda Nova", "forte_si_pct": 0.04179211982024291, "ofen_si": "Churn Inadimplência", "ofen_si_pct": 0.05481115011125461, "priority": "red"}, "regiao": ""}};
+const PRIORITY_COLOR = { red:'#C0392B', yellow:'#B8860B', green:'#2E7D4F', grey:'#8B93A8' };
+const PRIORITY_LABEL = { red:'Prioridade', yellow:'Atenção', green:'Benchmark', grey:'Neutro' };
+const KPI_LABELS = { QUEDA_DESC:'Queda Desconto', REAJUSTE:'Reajuste', UPSELL:'Upsell', FIMBONIF:'Térm. Bonif.',
+  VENDA_NOVA:'Venda Nova', CHURN_INAD:'Churn Inadimpl.', CHURN_SOLIC:'Churn Solicitação', DOWNSELL:'Downsell' };
+const FULL_LABELS = { QUEDA_DESC:'Queda Desconto', REAJUSTE:'Reajuste', UPSELL:'Upsell', FIMBONIF:'Término Bonificação',
+  VENDA_NOVA:'Venda Nova', CHURN_INAD:'Churn Inadimplência', CHURN_SOLIC:'Churn Solicitação', DOWNSELL:'Downsell' };
+const PROD_CODES = ['QUEDA_DESC','REAJUSTE','UPSELL','FIMBONIF','VENDA_NOVA'];
+const OFEN_CODES = ['CHURN_INAD','CHURN_SOLIC','DOWNSELL'];
+const MONTHS = ['Jan','Fev','Mar','Abr','Mai','Jun','Jul'];
+const names = Object.keys(DATA);
+let selected = names[0];
+let activeWindow = 'w3';
+const WIN_LABEL = { w3: 'últimos 3 meses (mai-jul)', w6: 'últimos 6 meses (fev-jul)' };
+const WIN_LABEL_SHORT = { w3: '3m', w6: '6m' };
+
+document.getElementById('sidebarCount').textContent = `Executivos (${names.length})`;
+
+function fmtR$(v){ return 'R$ ' + Math.round(v).toLocaleString('pt-BR'); }
+function fmtPct(v, d=1){ return v==null ? '—' : v.toFixed(d).replace('.',',') + '%'; }
+function signed(v, d=2){ if(v==null) return '—'; const s = v>=0?'+':''; return s+v.toFixed(d).replace('.',','); }
+
+// ---------- Window toggle ----------
+document.getElementById('winBtn3').onclick = ()=>{ activeWindow='w3'; document.getElementById('winBtn3').classList.add('active'); document.getElementById('winBtn6').classList.remove('active'); refreshAll(); };
+document.getElementById('winBtn6').onclick = ()=>{ activeWindow='w6'; document.getElementById('winBtn6').classList.add('active'); document.getElementById('winBtn3').classList.remove('active'); refreshAll(); };
+function refreshAll(){ renderList(); renderBubble(); renderDetail(); }
+
+// ---------- Sidebar ----------
+function renderList(){
+  const el = document.getElementById('execList');
+  el.innerHTML = '';
+  const order = {red:0, yellow:1, green:2, grey:3};
+  const sorted = [...names].sort((a,b)=> order[DATA[a][activeWindow].priority]-order[DATA[b][activeWindow].priority] || a.localeCompare(b));
+  sorted.forEach(n=>{
+    const d = DATA[n][activeWindow];
+    const div = document.createElement('div');
+    div.className = 'exec-item' + (n===selected ? ' active' : '');
+    div.innerHTML = `<span class="pdot" style="background:${PRIORITY_COLOR[d.priority]}"></span>
+      <div><div class="exec-name">${n}</div><div class="exec-sub">${DATA[n].regiao}</div></div>`;
+    div.onclick = ()=>{ selected = n; renderList(); renderDetail(); };
+    el.appendChild(div);
+  });
+}
+
+// ---------- Bubble chart ----------
+let bubbleChart;
+let bubbleView = 'fatur';
+function renderBubble(){
+  document.getElementById('bubbleSub').innerHTML = `Eixo X: atingimento de meta de ${bubbleView==='fatur'?'Faturamento':'Ponderada'} (média dos ${WIN_LABEL[activeWindow]}). Eixo Y: índice do maior ofensor vs. mediana do time. Tamanho da bolha: carteira média.`;
+  const ctx = document.getElementById('bubbleCanvas').getContext('2d');
+  const maxCarteira = Math.max(...names.map(n=>DATA[n][activeWindow].carteira));
+  const datasets = Object.keys(PRIORITY_COLOR).map(p=>{
+    const pts = names.filter(n=>DATA[n][activeWindow].priority===p).map(n=>{
+      const d = DATA[n][activeWindow];
+      const xVal = bubbleView==='fatur' ? d.fatur_mean : d.pond_mean;
+      const r = 10 + (d.carteira/maxCarteira)*30;
+      return {x: xVal, y: d.ofen_time_idx, r, name:n};
+    });
+    return { label: PRIORITY_LABEL[p], data: pts, backgroundColor: PRIORITY_COLOR[p]+'CC', borderColor: PRIORITY_COLOR[p], borderWidth:1.5 };
+  });
+  if(bubbleChart) bubbleChart.destroy();
+  bubbleChart = new Chart(ctx, {
+    type:'bubble',
+    data:{ datasets },
+    options:{
+      maintainAspectRatio:false,
+      plugins:{
+        legend:{ position:'bottom', labels:{ font:{size:11}, usePointStyle:true } },
+        tooltip:{ callbacks:{ label:(c)=>{
+          const p = c.raw;
+          return `${p.name}: meta ${p.x!=null?p.x.toFixed(1):'—'}% · ofensor ${p.y.toFixed(2)}x · carteira ${fmtR$(DATA[p.name][activeWindow].carteira)}`;
+        }}}
+      },
+      scales:{
+        x:{ title:{display:true, text: (bubbleView==='fatur' ? 'Atingimento de meta de Faturamento (%)' : 'Atingimento de meta Ponderada (%)')}, grid:{color:'#EEF0F5'} },
+        y:{ title:{display:true, text:'Índice do maior ofensor vs. time'}, grid:{color:'#EEF0F5'} }
+      },
+      onClick:(evt, els)=>{ if(els.length){ const el=els[0]; const pt=bubbleChart.data.datasets[el.datasetIndex].data[el.index]; selected=pt.name; renderList(); renderDetail(); } }
+    },
+    plugins:[{
+      id:'refLines',
+      beforeDraw:(chart)=>{
+        const {ctx, chartArea:{left,right,top,bottom}, scales:{x,y}} = chart;
+        ctx.save();
+        const xRed = x.getPixelForValue(98.5);
+        const xGreen = x.getPixelForValue(101);
+        const yRed = y.getPixelForValue(2.5);
+        ctx.fillStyle='rgba(192,57,43,0.06)'; ctx.fillRect(left, top, Math.max(0,xRed-left), Math.max(0,yRed-top));
+        ctx.fillStyle='rgba(46,125,79,0.06)'; ctx.fillRect(xGreen, yRed, Math.max(0,right-xGreen), Math.max(0,bottom-yRed));
+        ctx.strokeStyle='#B0B6C7'; ctx.setLineDash([5,5]); ctx.lineWidth=1.2;
+        [xRed, xGreen].forEach(xp=>{ ctx.beginPath(); ctx.moveTo(xp, top); ctx.lineTo(xp, bottom); ctx.stroke(); });
+        ctx.beginPath(); ctx.moveTo(left, yRed); ctx.lineTo(right, yRed); ctx.stroke();
+        ctx.setLineDash([]);
+        ctx.font='10.5px Inter, sans-serif'; ctx.fillStyle='#8B93A8';
+        ctx.textAlign='left'; ctx.fillText('98,5%', xRed+3, bottom-6);
+        ctx.fillText('101%', xGreen+3, bottom-6);
+        ctx.textAlign='right'; ctx.fillText('2,5x', right-4, yRed-4);
+        ctx.restore();
+      }
+    }]
+  });
+}
+document.getElementById('bubbleFat').onclick = ()=>{ bubbleView='fatur'; document.getElementById('bubbleFat').classList.add('active'); document.getElementById('bubblePond').classList.remove('active'); renderBubble(); };
+document.getElementById('bubblePond').onclick = ()=>{ bubbleView='pond'; document.getElementById('bubblePond').classList.add('active'); document.getElementById('bubbleFat').classList.remove('active'); renderBubble(); };
+
+// ---------- Insight generator ----------
+function generateInsight(name, w){
+  const d = DATA[name][w];
+  const winTxt = WIN_LABEL[w];
+  const fatur = d.fatur_mean;
+  const forte = FULL_LABELS[d.forte_time_code], forteIdx = d.forte_time_idx;
+  const ofen = FULL_LABELS[d.ofen_time_code], ofenIdx = d.ofen_time_idx;
+  const cont = FULL_LABELS[d.cont_code], contIdx = d.cont_idx;
+  const growth = d.growth_mean, growthMin = d.growth_min;
+  const growthTxt = growth>=0
+    ? `Carteira crescendo em média ${signed(growth)}% ao mês nos ${winTxt} (mínimo ${signed(growthMin)}%).`
+    : `Carteira encolhendo em média ${signed(growth)}% ao mês nos ${winTxt} (mínimo ${signed(growthMin)}%).`;
+
+  if(d.priority === 'red'){
+    let s = `Faturamento (média, ${winTxt}) de ${fmtPct(fatur)}`;
+    s += fatur<95 ? ' — bem abaixo do corte de prioridade (98,5%).' : ' — abaixo do corte de prioridade (98,5%).';
+    if(ofenIdx>=2.5) s += ` ${ofen} em ${ofenIdx.toFixed(2)}x o time também aciona o critério isoladamente.`;
+    else s += ` ${ofen} em ${ofenIdx.toFixed(2)}x o time reforça o quadro.`;
+    if(forteIdx>=1.3) s += ` Ainda assim, ${forte} (${forteIdx.toFixed(2)}x) é um ponto positivo isolado que não compensa o resultado geral.`;
+    s += ' ' + growthTxt;
+    return s;
+  }
+  if(d.priority === 'green'){
+    let s = `Bate a meta (faturamento ${fmtPct(fatur)} de média, ${winTxt}) com ${forte} em destaque (${forteIdx.toFixed(2)}x o time)`;
+    if(contIdx<0.3) s += `, além de ótima contenção de ${cont} (${contIdx.toFixed(2)}x)`;
+    s += '.';
+    s += ' ' + growthTxt;
+    return s;
+  }
+  if(d.priority === 'yellow'){
+    let s = `Faturamento de ${fmtPct(fatur)} (média, ${winTxt}) — abaixo dos 100% necessários para benchmark, sem acionar o critério de prioridade.`;
+    s += ` Ponto forte: ${forte} (${forteIdx.toFixed(2)}x); maior ofensor: ${ofen} (${ofenIdx.toFixed(2)}x).`;
+    s += ' ' + growthTxt;
+    return s;
+  }
+  // grey
+  let s = `Bate a meta (faturamento ${fmtPct(fatur)} de média, ${winTxt}), mas nenhum indicador ficou extremo o bastante para benchmark`;
+  s += ` (melhor sinal: ${forteIdx>=1?forte+' '+forteIdx.toFixed(2)+'x' : cont+' '+contIdx.toFixed(2)+'x'}).`;
+  s += ' ' + growthTxt;
+  return s;
+}
+
+// ---------- Detail panel ----------
+let kpiChart, goalChart, drillChart;
+let goalView = 'fatur';
+
+function renderDetail(){
+  const dAll = DATA[selected];
+  const d = dAll[activeWindow];
+  const card = document.getElementById('detailCard');
+  const forteColor = d.forte_time_idx >= 1 ? 'var(--green)' : 'var(--muted)';
+  const ofenColor = d.ofen_time_idx >= 1 ? 'var(--red)' : 'var(--green)';
+
+  card.innerHTML = `
+    <div class="detail-header">
+      <div class="detail-name">${selected}<span class="window-pill">${WIN_LABEL_SHORT[activeWindow]}</span></div>
+      <span class="badge ${d.priority}">${PRIORITY_LABEL[d.priority]}</span>
+    </div>
+    <div class="detail-meta">${dAll.regiao}</div>
+
+    <div class="kpi-row">
+      <div class="kpi"><div class="label">Carteira média</div><div class="value">${fmtR$(d.carteira)}</div></div>
+      <div class="kpi"><div class="label">Meta Faturamento</div><div class="value">${fmtPct(d.fatur_mean)}</div></div>
+      <div class="kpi"><div class="label">Meta Ponderada</div><div class="value">${fmtPct(d.pond_mean)}</div></div>
+      <div class="kpi"><div class="label">Crescimento médio carteira</div><div class="value">${signed(d.growth_mean)}% <span class="sub">(mín ${signed(d.growth_min)}%)</span></div></div>
+    </div>
+
+    <div class="group-label">Comparado à própria carteira (${WIN_LABEL[activeWindow]})</div>
+    <div class="cmp-row">
+      <div class="kpi2"><div class="label">Ponto forte</div><div class="value">${d.forte_si} <span style="color:var(--green)">(${(d.forte_si_pct*100).toFixed(2).replace('.',',')}% da carteira)</span></div></div>
+      <div class="kpi2"><div class="label">Maior ofensor</div><div class="value">${d.ofen_si} <span style="color:var(--red)">(${(d.ofen_si_pct*100).toFixed(2).replace('.',',')}% da carteira)</span></div></div>
+    </div>
+
+    <div class="group-label">Comparado à mediana do time (${WIN_LABEL[activeWindow]})</div>
+    <div class="cmp-row three">
+      <div class="kpi2"><div class="label">Ponto forte</div><div class="value">${FULL_LABELS[d.forte_time_code]} <span style="color:${forteColor}">(${d.forte_time_idx.toFixed(2)}x)</span></div></div>
+      <div class="kpi2"><div class="label">Maior ofensor</div><div class="value">${FULL_LABELS[d.ofen_time_code]} <span style="color:${ofenColor}">(${d.ofen_time_idx.toFixed(2)}x)</span></div></div>
+      <div class="kpi2"><div class="label">Melhor contenção</div><div class="value">${FULL_LABELS[d.cont_code]} <span style="color:var(--green)">(${d.cont_idx.toFixed(2)}x)</span></div></div>
+    </div>
+
+    <div class="grid2" style="margin-top:16px;">
+      <div>
+        <div class="section-sub" style="margin-bottom:6px;"><b>8 indicadores vs. mediana do time</b> (${WIN_LABEL[activeWindow]} · clique numa barra para ver a evolução mensal completa)</div>
+        <div class="chart-box"><canvas id="kpiCanvas"></canvas></div>
+        <div class="drilldown" id="drilldown">
+          <div class="drilldown-head">
+            <div class="drilldown-title" id="drillTitle"></div>
+            <button class="close-btn" id="drillClose">Fechar</button>
+          </div>
+          <div class="drill-chart"><canvas id="drillCanvas"></canvas></div>
+        </div>
+      </div>
+      <div>
+        <div class="section-sub" style="margin-bottom:6px; display:flex; align-items:center; justify-content:space-between;">
+          <span><b>Atingimento de meta — jan a jul</b></span>
+          <span class="toggle-group">
+            <button class="toggle-btn active" id="btnFat">Faturamento</button>
+            <button class="toggle-btn" id="btnPond">Ponderada</button>
+          </span>
+        </div>
+        <div class="chart-box"><canvas id="goalCanvas"></canvas></div>
+      </div>
+    </div>
+
+    <div class="insight-box">
+      <div class="lbl">Insight-chave (${WIN_LABEL[activeWindow]})</div>
+      <p>${generateInsight(selected, activeWindow)}</p>
+    </div>
+  `;
+  // remove the redundant "vs si mesmo" incomplete block above (fixed below by rebuilding properly)
+
+  goalView = 'fatur';
+  drawKpiChart(dAll, d);
+  drawGoalChart(dAll);
+  document.getElementById('drillClose').onclick = ()=>{ document.getElementById('drilldown').classList.remove('show'); };
+  document.getElementById('btnFat').onclick = ()=>{ goalView='fatur'; document.getElementById('btnFat').classList.add('active'); document.getElementById('btnPond').classList.remove('active'); drawGoalChart(dAll); };
+  document.getElementById('btnPond').onclick = ()=>{ goalView='pond'; document.getElementById('btnPond').classList.add('active'); document.getElementById('btnFat').classList.remove('active'); drawGoalChart(dAll); };
+}
+
+function drawKpiChart(dAll, d){
+  const codes = [...PROD_CODES, ...OFEN_CODES];
+  const trueVals = codes.map(c=>d.idx[c]);
+  const CAP = 4;
+  const dispVals = trueVals.map(v=> Math.min(v, CAP));
+  const colors = codes.map((c,i)=> OFEN_CODES.includes(c) ? (trueVals[i]>=1?'#C0392B':'#2E7D4F') : '#1F3864');
+  if(kpiChart) kpiChart.destroy();
+  kpiChart = new Chart(document.getElementById('kpiCanvas').getContext('2d'), {
+    type:'bar',
+    data:{ labels: codes.map(c=>KPI_LABELS[c]), datasets:[{ data: dispVals, backgroundColor: colors, borderRadius:4 }] },
+    options:{
+      maintainAspectRatio:false,
+      plugins:{ legend:{display:false}, tooltip:{ callbacks:{ label:(c)=>{
+        const real = trueVals[c.dataIndex];
+        return real>CAP ? `${real.toFixed(2)}x o time (fora de escala — indicador raro no time, poucos dados de referência) — clique para ver mês a mês` : `${real.toFixed(2)}x o time — clique para ver mês a mês`;
+      } } } },
+      scales:{ y:{ beginAtZero:true, max:CAP, title:{display:true, text:'índice vs time (máx. 4x na escala)'} }, x:{ ticks:{ font:{size:10}, maxRotation:35, minRotation:35 } } },
+      onClick: (evt, els)=>{ if(els.length){ openDrilldown(dAll, codes[els[0].index]); } }
+    },
+    plugins:[{
+      id:'baseline',
+      afterDraw:(chart)=>{
+        const {ctx, scales:{x,y}} = chart;
+        const yPix = y.getPixelForValue(1);
+        ctx.save(); ctx.strokeStyle='#999'; ctx.setLineDash([4,4]); ctx.lineWidth=1;
+        ctx.beginPath(); ctx.moveTo(x.left, yPix); ctx.lineTo(x.right, yPix); ctx.stroke();
+        // mark capped bars
+        chart.getDatasetMeta(0).data.forEach((bar, i)=>{
+          if(trueVals[i] > CAP){
+            ctx.fillStyle = '#1F3864'; ctx.font = 'bold 11px Inter, sans-serif'; ctx.textAlign='center';
+            ctx.fillText('▲ '+trueVals[i].toFixed(1)+'x', bar.x, bar.y - 6);
+          }
+        });
+        ctx.restore();
+      }
+    }]
+  });
+}
+
+function openDrilldown(dAll, code){
+  const dd = document.getElementById('drilldown');
+  dd.classList.add('show');
+  document.getElementById('drillTitle').textContent = `${FULL_LABELS[code]} — evolução mensal (${selected})`;
+  const series = dAll.monthly[code];
+  if(drillChart) drillChart.destroy();
+  drillChart = new Chart(document.getElementById('drillCanvas').getContext('2d'), {
+    type:'line',
+    data:{ labels: MONTHS, datasets:[{
+      data: series.idx, spanGaps:true, borderColor:'#1F3864', backgroundColor:'#1F386422',
+      fill:true, tension:.25, pointRadius:4, pointBackgroundColor:'#1F3864'
+    }]},
+    options:{
+      maintainAspectRatio:false,
+      plugins:{
+        legend:{display:false},
+        tooltip:{ callbacks:{
+          label:(c)=>{
+            const i = c.dataIndex;
+            const val = series.value[i], pct = series.pct[i], idx = series.idx[i];
+            if(idx==null) return 'sem dado';
+            return [`Índice: ${idx.toFixed(2)}x o time`, `Valor: ${fmtR$(val)}`, `% da carteira: ${(pct*100).toFixed(2).replace('.',',')}%`];
+          }
+        }}
+      },
+      scales:{ y:{ title:{display:true, text:'índice vs time (referência da janela ativa)'} } }
+    },
+    plugins:[{
+      id:'baseline2',
+      afterDraw:(chart)=>{
+        const {ctx, scales:{x,y}} = chart;
+        const yPix = y.getPixelForValue(1);
+        ctx.save(); ctx.strokeStyle='#999'; ctx.setLineDash([4,4]); ctx.lineWidth=1;
+        ctx.beginPath(); ctx.moveTo(x.left, yPix); ctx.lineTo(x.right, yPix); ctx.stroke(); ctx.restore();
+      }
+    }]
+  });
+  dd.scrollIntoView({behavior:'smooth', block:'nearest'});
+}
+
+function drawGoalChart(dAll){
+  const series = goalView==='fatur' ? dAll.goal_months_fatur : dAll.goal_months_pond;
+  const label = goalView==='fatur' ? '% da meta de Faturamento' : '% da meta Ponderada';
+  if(goalChart) goalChart.destroy();
+  goalChart = new Chart(document.getElementById('goalCanvas').getContext('2d'), {
+    type:'line',
+    data:{ labels: MONTHS, datasets:[{
+      data: series, spanGaps:true, borderColor:'#1F3864', backgroundColor:'#1F386422',
+      fill:true, tension:.3, pointRadius:4, pointBackgroundColor:'#1F3864'
+    }]},
+    options:{
+      maintainAspectRatio:false,
+      plugins:{ legend:{display:false}, tooltip:{ callbacks:{ label:(c)=> c.raw!=null? c.raw.toFixed(1)+'%':'sem dado' } } },
+      scales:{ y:{ title:{display:true, text:label} } }
+    },
+    plugins:[{
+      id:'goalline',
+      afterDraw:(chart)=>{
+        const {ctx, scales:{x,y}} = chart;
+        const yPix = y.getPixelForValue(100);
+        ctx.save(); ctx.strokeStyle='#999'; ctx.setLineDash([4,4]); ctx.lineWidth=1;
+        ctx.beginPath(); ctx.moveTo(x.left, yPix); ctx.lineTo(x.right, yPix); ctx.stroke(); ctx.restore();
+      }
+    }]
+  });
+}
+
+renderList();
+renderBubble();
+renderDetail();
+</script>
+</body>
+</html>
